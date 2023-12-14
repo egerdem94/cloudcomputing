@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Campus Cuisine</title>
+<style>
+  body { font-family: Arial, sans-serif; }
+  .restaurant-grid { display: flex; flex-wrap: wrap; gap: 16px; padding: 20px; justify-content: center; }
+  .restaurant-card { width: 200px; border: 1px solid #ddd; border-radius: 4px; padding: 16px; text-align: center; cursor: pointer; }
+  .restaurant-card img { max-width: 100%; height: auto; border-radius: 4px; }
+  .menu { display: none; background: #fff; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); width: 80%; border: 1px solid #ddd; padding: 20px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+  .menu.active { display: block; }
+  .menu-item { border-bottom: 1px solid #ddd; padding: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .quantity-controls { display: flex; align-items: center; }
+  .quantity-btn { cursor: pointer; }
+  .quantity { margin: 0 10px; }
+  .order-btn { background: #4CAF50; color: white; padding: 10px 20px; text-align: center; text-decoration: none; display: inline-block; font-size: 16px; margin: 10px 2px; cursor: pointer; border: none; border-radius: 4px; }
+  .confirmation-modal { display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+  .modal-content { background: white; padding: 20px; border-radius: 5px; text-align: center; }
+  .modal-content button { margin-top: 15px; }
+  .order-item { margin-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<div class="restaurant-grid" id="restaurantGrid">
+  <!-- Dynamically generate restaurant cards here -->
+</div>
+
+<div class="menu" id="menu">
+  <span class="close-btn" onclick="closeMenu()">X</span>
+  <h2>Menu</h2>
+  <div id="menuItems">
+    <!-- Dynamically generate menu items here -->
+  </div>
+  <button class="order-btn" onclick="openConfirmationModal()">Order</button>
+</div>
+
+<div class="confirmation-modal" id="confirmationModal">
+  <div class="modal-content">
+    <h3>Confirm Your Order</h3>
+    <div id="orderDetails"></div> <!-- Order details will be displayed here -->
+    <div id="totalCost">Total Cost: </div> <!-- Total cost will be displayed here -->
+    <button id="confirmOrder" onclick="confirmOrder()">Confirm</button>
+    <button onclick="closeConfirmationModal()">Cancel</button>
+  </div>
+</div>
+
+<script>
+// Sample data for restaurants
+const restaurants = [
+  { name: 'Ada Pizza', image: 'ada-pizza-image.png', hours: '11:00 - 02:00', reviews: 78, menu: [
+    { item: 'Italian Pizza (Small)', price: '₺19' },
+    { item: 'Italian Pizza (Medium)', price: '₺25' }
+    // ... more menu items
+  ]},
+  { name: 'Alacarte Cafe', image: 'alacarte-cafe-image.png', hours: '11:00 - 02:00', reviews: 72, menu: [
+    { item: 'Coffee', price: '₺10' },
+    { item: 'Cake', price: '₺15' }
+    // ... more menu items
+  ]}
+  // ... other restaurants
+];
+
+let selectedItems = {}; // Array to track selected items and their quantities
+
+// Function to display restaurants
+function displayRestaurants() {
+    const grid = document.getElementById('restaurantGrid');
+	restaurants.forEach(restaurant => {
+    const card = document.createElement('div');
+    card.className = 'restaurant-card';
+    card.innerHTML = `
+      <img src="${restaurant.image}" alt="${restaurant.name}">
+      <h2>${restaurant.name}</h2>
+      <p>${restaurant.hours}</p>
+      <p>${restaurant.reviews} reviews</p>
+    `;
+    card.onclick = () => showMenu(restaurant);
+    grid.appendChild(card);
+  });
+}
+
+// Function to show the menu of a clicked restaurant
+function showMenu(restaurant) {
+  const menuElement = document.getElementById('menu');
+  const menuItemsElement = document.getElementById('menuItems');
+  menuItemsElement.innerHTML = ''; // Clear previous menu items
+
+  restaurant.menu.forEach(menuItem => {
+    const itemElement = document.createElement('div');
+    itemElement.className = 'menu-item';
+    itemElement.innerHTML = `
+      <span>${menuItem.item}</span>
+      <div class="quantity-controls">
+        <button class="quantity-btn" onclick="changeQuantity(event, -1)">-</button>
+        <span class="quantity">0</span>
+        <button class="quantity-btn" onclick="changeQuantity(event, 1)">+</button>
+      </div>
+      <span>${menuItem.price}</span>
+    `;
+    menuItemsElement.appendChild(itemElement);
+  });
+
+  menuElement.querySelector('h2').textContent = restaurant.name + ' Menu'; // Set the menu title
+  menuElement.classList.add('active');
+}
+
+
+// Function to close the menu
+function closeMenu() {
+  const menuElement = document.getElementById('menu');
+  menuElement.classList.remove('active');
+}
+
+// Function to open the confirmation modal
+function openConfirmationModal() {
+  const modal = document.getElementById('confirmationModal');
+  const orderDetailsDiv = document.getElementById('orderDetails');
+  const totalCostP = document.getElementById('totalCost');
+  
+  // Clear previous order details
+  orderDetailsDiv.innerHTML = '';
+  let totalCost = 0;
+  
+  // Loop through selected items and display them in the modal
+  for (const [itemName, itemDetails] of Object.entries(selectedItems)) {
+    if (itemDetails.quantity > 0) {
+      const itemCost = itemDetails.quantity * itemDetails.price;
+      totalCost += itemCost;
+      
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'order-item';
+      itemDiv.textContent = `${itemName} - Quantity: ${itemDetails.quantity} - Cost: ₺${itemCost}`;
+      orderDetailsDiv.appendChild(itemDiv);
+    }
+  }
+  
+  // Display the total cost
+  totalCostP.textContent = `Total Cost: ₺${totalCost}`;
+  
+  modal.style.display = 'flex';
+}
+
+// Function to close the confirmation modal
+function closeConfirmationModal() {
+  document.getElementById('confirmationModal').style.display = 'none';
+}
+
+// Function to confirm the order
+function confirmOrder() {
+  // Implement your order processing logic here
+  console.log('Order has been confirmed!');
+  closeConfirmationModal();
+  selectedItems = {}; // Reset the selected items
+}
+
+// Function to change the quantity of a menu item
+function changeQuantity(event, delta) {
+  let quantityElement = event.target.parentElement.querySelector('.quantity');
+  let currentQuantity = parseInt(quantityElement.textContent);
+  let newQuantity = currentQuantity + delta;
+  if(newQuantity < 0) newQuantity = 0; // The quantity should not be less than 0
+  quantityElement.textContent = newQuantity;
+}
+
+
+// Call displayRestaurants on script load
+displayRestaurants();
+</script>
+
+</body>
+</html>
